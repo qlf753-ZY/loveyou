@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>♥ZY</title>
+    <style>
+        /* 基础重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            font-size: 16px;
+            width: 100%;
+            height: 100%;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #ffafbd, #ffc3a0);
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            min-height: 100vh;
+        }
+        
+        /* 初始欢迎页面样式 */
+        .welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            color: white;
+            text-align: center;
+            padding: 1rem;
+        }
+        
+        .welcome-title {
+            font-size: clamp(1.5rem, 5vw, 3rem);
+            margin-bottom: 1rem;
+            text-shadow: 0.1rem 0.1rem 0.2rem rgba(0, 0, 0, 0.3);
+            line-height: 1.3;
+            padding: 0 1rem;
+        }
+        
+        .countdown {
+            font-size: clamp(3rem, 15vw, 8rem);
+            font-weight: bold;
+            text-shadow: 0.15rem 0.15rem 0.3rem rgba(0, 0, 0, 0.4);
+            animation: zoomInOut 1s ease-in-out;
+        }
+        
+        @keyframes zoomInOut {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* 烟花容器样式 */
+        #fireworks-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20;
+            display: none;
+            background: #000;
+        }
+        
+        .tip-window {
+            position: absolute;
+            width: min(12.5rem, 80vw);
+            min-height: 2.5rem;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            box-shadow: 0 0.2rem 0.6rem rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            z-index: 5;
+            overflow: hidden;
+        }
+        
+        .tip-window:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0.3rem 1rem rgba(0, 0, 0, 0.3);
+        }
+        
+        .tip-text {
+            font-size: clamp(0.875rem, 3vw, 1rem);
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        
+        .tip-image {
+            width: 100%;
+            max-width: 10rem;
+            height: auto;
+            aspect-ratio: 16/10;
+            border-radius: 0.4rem;
+            object-fit: cover;
+            margin-top: 0.3rem;
+        }
+
+        /* 烟花相关样式 */
+        .fireworks-stage-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .fireworks-canvas-container {
+            width: 100%;
+            height: 100%;
+            transition: filter 0.3s;
+            cursor: pointer;
+        }
+
+        .fireworks-canvas-container canvas {
+            position: absolute;
+            mix-blend-mode: lighten;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .fireworks-title {
+            position: absolute;
+            top: 1rem;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: clamp(1.2rem, 4vw, 2rem);
+            color: white;
+            text-shadow: 0 0 0.5rem rgba(255, 255, 255, 0.7);
+            z-index: 10;
+            pointer-events: none;
+            padding: 0 1rem;
+        }
+
+        .fireworks-instructions {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: clamp(0.75rem, 2.5vw, 1rem);
+            color: rgba(255, 255, 255, 0.7);
+            z-index: 10;
+            pointer-events: none;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem 0;
+            backdrop-filter: blur(0.1rem);
+        }
+    </style>
+</head>
+<body>
+    <!-- 初始欢迎页面 -->
+    <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-title">请我最爱的人收下这份礼物</div>
+        <div class="countdown" id="countdown">3</div>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+    
+    <!-- 烟花容器 -->
+    <div id="fireworks-container">
+        <div class="fireworks-stage-container">
+            <div class="fireworks-title">请ZY看烟花</div>
+            <div class="fireworks-instructions">点击任意处发射烟花</div>
+            <div class="fireworks-canvas-container">
+                <canvas id="trails-canvas"></canvas>
+                <canvas id="main-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置参数 - 自适应调整
+        const CONFIG = {
+            numWindows: 60, // 手机端减少数量
+            heartScale: 15,
+            windowWidth: 200,
+            windowHeight: 40,
+            expandedHeight: 180,
+            imageWidth: 160,
+            imageHeight: 100,
+            heartFormationDelay: 150,
+            heartDisplayTime: 2000,
+            spreadDuration: 3000,
+            hidePause: 500
+        };
+
+        // 温馨提示文本
+        const TIPS = [
+            '多喝水哦~', '保持微笑呀', '每天都要元气满满',
+            '记得吃水果', '保持好心情', '好好爱自己', '我想你了',
+            '梦想成真', '期待下一次见面', '金榜题名',
+            '顺顺利利', '早点休息', '愿所有烦恼都消失',
+            '别熬夜', '今天过得开心嘛', '天冷了，多穿衣服'
+        ];
+
+        // 背景颜色
+        const BG_COLORS = [
+            'lightpink', 'skyblue', 'lightgreen', 'lavender',
+            'lightyellow', 'plum', 'coral', 'bisque', 'aquamarine'
+        ];
+
+        // 全局变量
+        let canvas, ctx;
+        let windowList = [];
+        let animationId;
+        let isAnimating = false;
+        let screenWidth, screenHeight;
+        let loadedImages = [];
+        let heartPoints = [];
+
+        // 初始化
+        function init() {
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+            
+            // 设置Canvas尺寸
+            updateCanvasSize();
+            
+            // 开始倒计时
+            startCountdown();
+            
+            // 自动加载1.png到36.png
+            loadLocalImages();
+            
+            // 添加窗口调整监听
+            window.addEventListener('resize', handleResize);
+            window.addEventListener('orientationchange', handleResize);
+        }
+
+        // 更新Canvas尺寸
+        function updateCanvasSize() {
+            screenWidth = window.innerWidth;
+            screenHeight = window.innerHeight;
+            
+            canvas.width = screenWidth;
+            canvas.height = screenHeight;
+            
+            // 根据屏幕大小动态调整参数
+            const scale = Math.min(screenWidth, screenHeight) / 500;
+            CONFIG.heartScale = Math.max(10, Math.min(25, 15 * scale));
+            CONFIG.numWindows = Math.max(40, Math.min(80, 60 * scale));
+        }
+
+        // 处理窗口大小变化
+        function handleResize() {
+            updateCanvasSize();
+            
+            // 重新绘制爱心点
+            if (heartPoints.length > 0) {
+                heartPoints = getHeartPoints(CONFIG.numWindows);
+            }
+        }
+
+        // 开始倒计时
+        function startCountdown() {
+            let count = 3;
+            const countdownElement = document.getElementById('countdown');
+            const welcomeScreen = document.getElementById('welcomeScreen');
+            
+            // 立即显示3
+            countdownElement.textContent = count;
+            
+            const countdownInterval = setInterval(() => {
+                count--;
+                countdownElement.textContent = count;
+                countdownElement.style.animation = 'none';
+                void countdownElement.offsetWidth;
+                countdownElement.style.animation = 'zoomInOut 1s ease-in-out';
+                
+                if (count === 0) {
+                    clearInterval(countdownInterval);
+                    setTimeout(() => {
+                        welcomeScreen.style.display = 'none';
+                        startAnimation();
+                    }, 1000);
+                }
+            }, 1000);
+        }
+
+        // 加载本地图片
+        function loadLocalImages() {
+            loadedImages = [];
+            const totalImages = 36;
+            let loadedCount = 0;
+            let errorCount = 0;
+            
+            for (let i = 1; i <= totalImages; i++) {
+                const img = new Image();
+                
+                img.onload = function() {
+                    loadedCount++;
+                    loadedImages.push(img);
+                    
+                    if (loadedCount + errorCount === totalImages) {
+                        console.log(`成功加载 ${loadedImages.length} 张图片！`);
+                    }
+                };
+                
+                img.onerror = function() {
+                    errorCount++;
+                    loadedCount++;
+                    
+                    if (loadedCount + errorCount === totalImages) {
+                        if (loadedImages.length > 0) {
+                            console.log(`成功加载 ${loadedImages.length} 张图片（${errorCount}张失败）`);
+                        }
+                    }
+                };
+                
+                img.src = `${i}.png`;
+            }
+        }
+
+        // 生成爱心形状的点
+        function getHeartPoints(count, scale = CONFIG.heartScale) {
+            const points = [];
+            const centerX = screenWidth / 2;
+            const centerY = screenHeight / 2;
+            
+            for (let i = 0; i < count; i++) {
+                const ratio = i / (count - 1);
+                let t;
+                
+                if (ratio < 0.5) {
+                    t = Math.PI * Math.pow(2 * ratio, 1.1);
+                } else {
+                    t = Math.PI + Math.PI * Math.pow(2 * (ratio - 0.5), 0.9);
+                }
+                
+                const x = 16 * Math.pow(Math.sin(t), 3);
+                const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+                
+                const pointX = centerX + x * scale;
+                const pointY = centerY - (y + 2) * scale;
+                
+                points.push({ x: pointX, y: pointY });
+            }
+            
+            return points;
+        }
+
+        // 创建提示窗口
+        function createTipWindow(pos, index) {
+            const window = document.createElement('div');
+            window.className = 'tip-window';
+            
+            // 计算自适应窗口尺寸
+            const windowWidth = Math.min(CONFIG.windowWidth, screenWidth * 0.4);
+            const windowHeight = CONFIG.windowHeight;
+            
+            window.style.left = `${pos.x - windowWidth / 2}px`;
+            window.style.top = `${pos.y - windowHeight / 2}px`;
+            window.style.width = `${windowWidth}px`;
+            
+            // 随机背景色
+            const bgColor = BG_COLORS[Math.floor(Math.random() * BG_COLORS.length)];
+            window.style.backgroundColor = bgColor;
+            
+            // 随机提示文本
+            const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+            
+            // 创建文本元素
+            const textEl = document.createElement('div');
+            textEl.className = 'tip-text';
+            textEl.textContent = tip;
+            window.appendChild(textEl);
+            
+            // 存储窗口信息
+            const windowInfo = {
+                element: window,
+                originalX: pos.x - windowWidth / 2,
+                originalY: pos.y - windowHeight / 2,
+                currentX: pos.x - windowWidth / 2,
+                currentY: pos.y - windowHeight / 2,
+                targetX: 0,
+                targetY: 0,
+                tip: tip,
+                bgColor: bgColor,
+                hasImage: false,
+                imageElement: null,
+                index: index,
+                width: windowWidth,
+                height: windowHeight
+            };
+            
+            // 绑定双击事件
+            window.addEventListener('dblclick', () => {
+                returnToHeart(windowInfo);
+            });
+            
+            // 添加触摸事件支持
+            window.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+            });
+            
+            document.body.appendChild(window);
+            windowList.push(windowInfo);
+            
+            return windowInfo;
+        }
+
+        // 为窗口添加图片
+        function addImageToWindow(windowInfo) {
+            if (windowInfo.hasImage || loadedImages.length === 0) return;
+            
+            const img = loadedImages[Math.floor(Math.random() * loadedImages.length)];
+            const imgEl = document.createElement('img');
+            imgEl.className = 'tip-image';
+            imgEl.src = img.src;
+            imgEl.alt = '咱们裸熊';
+            
+            windowInfo.element.appendChild(imgEl);
+            windowInfo.imageElement = imgEl;
+            windowInfo.hasImage = true;
+            
+            // 动态调整高度
+            windowInfo.element.style.height = 'auto';
+        }
+
+        // 散开窗口
+        function spreadWindows() {
+            if (loadedImages.length === 0) return;
+            
+            setTimeout(() => {
+                reverseHeartAnimationInOrder();
+            }, CONFIG.heartDisplayTime);
+        }
+
+        // 按照出现顺序反向消失
+        function reverseHeartAnimationInOrder() {
+            let currentIndex = 0;
+            const totalWindows = windowList.length;
+            const delayBetweenWindows = 50;
+            
+            function hideNextWindow() {
+                if (currentIndex >= totalWindows) {
+                    setTimeout(showSpreadWindows, CONFIG.hidePause);
+                    return;
+                }
+                
+                const windowInfo = windowList[currentIndex];
+                if (windowInfo.element) {
+                    windowInfo.element.style.display = 'none';
+                }
+                
+                currentIndex++;
+                setTimeout(hideNextWindow, delayBetweenWindows);
+            }
+            
+            hideNextWindow();
+        }
+
+        // 显示散开的窗口
+        function showSpreadWindows() {
+            windowList.forEach((windowInfo) => {
+                if (windowInfo.element) {
+                    // 计算安全位置，避免超出屏幕
+                    const maxX = screenWidth - windowInfo.width;
+                    const maxY = screenHeight - (windowInfo.hasImage ? CONFIG.expandedHeight : windowInfo.height);
+                    
+                    const targetX = Math.random() * maxX;
+                    const targetY = Math.random() * maxY;
+                    
+                    windowInfo.targetX = targetX;
+                    windowInfo.targetY = targetY;
+                    
+                    windowInfo.element.style.display = 'block';
+                    addImageToWindow(windowInfo);
+                    animateWindowTo(windowInfo, targetX, targetY, CONFIG.spreadDuration);
+                }
+            });
+            
+            setTimeout(() => {
+                showFireworks();
+            }, 8000);
+        }
+
+        // 显示烟花效果
+        function showFireworks() {
+            resetAnimation();
+            
+            const fireworksContainer = document.getElementById('fireworks-container');
+            fireworksContainer.style.display = 'block';
+            
+            // 确保烟花canvas尺寸正确
+            const trailsCanvas = document.getElementById('trails-canvas');
+            const mainCanvas = document.getElementById('main-canvas');
+            
+            if (trailsCanvas && mainCanvas) {
+                trailsCanvas.width = screenWidth;
+                trailsCanvas.height = screenHeight;
+                mainCanvas.width = screenWidth;
+                mainCanvas.height = screenHeight;
+            }
+            
+            initFireworks();
+        }
+
+        // 窗口动画到指定位置
+        function animateWindowTo(windowInfo, targetX, targetY, duration) {
+            const startX = windowInfo.currentX;
+            const startY = windowInfo.currentY;
+            const startTime = performance.now();
+            
+            function updatePosition(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                const easeProgress = 1 - Math.pow(1 - progress, 2);
+                
+                windowInfo.currentX = startX + (targetX - startX) * easeProgress;
+                windowInfo.currentY = startY + (targetY - startY) * easeProgress;
+                
+                windowInfo.element.style.left = `${windowInfo.currentX}px`;
+                windowInfo.element.style.top = `${windowInfo.currentY}px`;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updatePosition);
+                }
+            }
+            
+            requestAnimationFrame(updatePosition);
+        }
+
+        // 返回爱心形状
+        function returnToHeart(windowInfo) {
+            if (windowInfo.imageElement) {
+                windowInfo.element.removeChild(windowInfo.imageElement);
+                windowInfo.imageElement = null;
+                windowInfo.hasImage = false;
+            }
+            
+            animateWindowTo(windowInfo, windowInfo.originalX, windowInfo.originalY, 1200);
+        }
+
+        // 开始动画
+        function startAnimation() {
+            if (isAnimating) return;
+            
+            if (loadedImages.length === 0) {
+                alert('图片尚未加载完成，请稍候再试！');
+                return;
+            }
+            
+            isAnimating = true;
+            resetAnimation();
+            
+            heartPoints = getHeartPoints(CONFIG.numWindows);
+            
+            heartPoints.forEach((point, index) => {
+                setTimeout(() => {
+                    createTipWindow(point, index);
+                    
+                    if (index === heartPoints.length - 1) {
+                        setTimeout(() => {
+                            spreadWindows();
+                        }, 1000);
+                    }
+                }, index * CONFIG.heartFormationDelay);
+            });
+        }
+
+        // 重置动画
+        function resetAnimation() {
+            windowList.forEach(windowInfo => {
+                if (windowInfo.element && windowInfo.element.parentNode) {
+                    windowInfo.element.parentNode.removeChild(windowInfo.element);
+                }
+            });
+            
+            windowList = [];
+            isAnimating = false;
+            
+            const fireworksContainer = document.getElementById('fireworks-container');
+            if (fireworksContainer) {
+                fireworksContainer.style.display = 'none';
+            }
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+
+        // ==================== 完整烟花代码 ====================
+        function initFireworks() {
+            'use strict';
+            console.clear();
+
+            const IS_MOBILE = window.innerWidth <= 640;
+            const IS_DESKTOP = window.innerWidth > 800;
+            const IS_HEADER = IS_DESKTOP && window.innerHeight < 300;
+            const MAX_WIDTH = 7680;
+            const MAX_HEIGHT = 4320;
+            const GRAVITY = 0.9;
+            let simSpeed = 1;
+
+            const COLOR = {
+                Red: '#ff0043',
+                Green: '#14fc56',
+                Blue: '#1e7fff',
+                Purple: '#e60aff',
+                Gold: '#ffae00',
+                White: '#ffffff'
+            };
+
+            const INVISIBLE = '_INVISIBLE_';
+
+            const store = {
+                state: {
+                    paused: false,
+                    longExposure: false,
+                    config: {
+                        shell: 'Random',
+                        size: IS_DESKTOP && !IS_HEADER ? '3' : '1',
+                        autoLaunch: true,
+                        finale: false,
+                        hideControls: IS_HEADER
+                    }
+                },
+                setState(nextState) {
+                    this.state = Object.assign({}, this.state, nextState);
+                }
+            };
+
+            function togglePause(toggle) {
+                if (typeof toggle === 'boolean') {
+                    store.setState({ paused: toggle });
+                } else {
+                    store.setState({ paused: !store.state.paused });
+                }
+            }
+
+            const canInteract = () => !store.state.paused;
+            const shellNameSelector = () => store.state.config.shell;
+            const shellSizeSelector = () => +store.state.config.size;
+
+            const appNodes = {
+                stageContainer: document.querySelector('.fireworks-stage-container'),
+                canvasContainer: document.querySelector('.fireworks-canvas-container')
+            };
+
+            const loadingInit = document.getElementById('loading-init');
+            if (loadingInit) loadingInit.remove();
+            if (appNodes.stageContainer) appNodes.stageContainer.classList.remove('remove');
+
+            const COLOR_NAMES = Object.keys(COLOR);
+            const COLOR_CODES = COLOR_NAMES.map(colorName => COLOR[colorName]);
+            const COLOR_CODES_W_INVIS = [...COLOR_CODES, INVISIBLE];
+            const COLOR_TUPLES = {};
+            COLOR_CODES.forEach(hex => {
+                COLOR_TUPLES[hex] = {
+                    r: parseInt(hex.substr(1, 2), 16),
+                    g: parseInt(hex.substr(3, 2), 16),
+                    b: parseInt(hex.substr(5, 2), 16),
+                };
+            });
+
+            function randomColorSimple() {
+                return COLOR_CODES[Math.random() * COLOR_CODES.length | 0];
+            }
+
+            let lastColor;
+
+            function randomColor(options) {
+                const notSame = options && options.notSame;
+                const notColor = options && options.notColor;
+                const limitWhite = options && options.limitWhite;
+                let color = randomColorSimple();
+                if (limitWhite && color === COLOR.White && Math.random() < 0.6) {
+                    color = randomColorSimple();
+                }
+                if (notSame) {
+                    while (color === lastColor) {
+                        color = randomColorSimple();
+                    }
+                } else if (notColor) {
+                    while (color === notColor) {
+                        color = randomColorSimple();
+                    }
+                }
+                lastColor = color;
+                return color;
+            }
+
+            function whiteOrGold() {
+                return Math.random() < 0.5 ? COLOR.Gold : COLOR.White;
+            }
+
+            const PI_2 = Math.PI * 2;
+            const PI_HALF = Math.PI * 0.5;
+
+            const trailsCanvas = document.getElementById('trails-canvas');
+            const mainCanvas = document.getElementById('main-canvas');
+            
+            if (!trailsCanvas || !mainCanvas) {
+                console.error('Canvas elements not found');
+                return;
+            }
+
+            // 确保canvas尺寸正确
+            trailsCanvas.width = screenWidth;
+            trailsCanvas.height = screenHeight;
+            mainCanvas.width = screenWidth;
+            mainCanvas.height = screenHeight;
+
+            class Stage {
+                constructor(canvasElement) {
+                    this.canvas = canvasElement;
+                    this.ctx = this.canvas.getContext('2d');
+                    this.dpr = window.devicePixelRatio || 1;
+                    this.width = screenWidth;
+                    this.height = screenHeight;
+                    this.resize(this.width, this.height);
+                    
+                    this.eventListeners = {
+                        ticker: [],
+                        pointerstart: [],
+                        pointerend: [],
+                        pointermove: []
+                    };
+                }
+                
+                resize(width, height) {
+                    this.width = width;
+                    this.height = height;
+                    this.canvas.width = width * this.dpr;
+                    this.canvas.height = height * this.dpr;
+                    this.canvas.style.width = width + 'px';
+                    this.canvas.style.height = height + 'px';
+                }
+                
+                addEventListener(event, callback) {
+                    if (this.eventListeners[event]) {
+                        this.eventListeners[event].push(callback);
+                    }
+                }
+                
+                trigger(event, ...args) {
+                    if (this.eventListeners[event]) {
+                        this.eventListeners[event].forEach(callback => callback(...args));
+                    }
+                }
+            }
+
+            const trailsStage = new Stage(trailsCanvas);
+            const mainStage = new Stage(mainCanvas);
+            const stages = [trailsStage, mainStage];
+
+            trailsStage.ctx.fillStyle = '#000';
+            trailsStage.ctx.fillRect(0, 0, trailsStage.width, trailsStage.height);
+
+            function makePistilColor(shellColor) {
+                return (shellColor === COLOR.White || shellColor === COLOR.Gold) ? randomColor({
+                    notColor: shellColor
+                }) : whiteOrGold();
+            }
+
+            const crysanthemumShell = (size = 1) => {
+                const glitter = Math.random() < 0.25;
+                const singleColor = Math.random() < 0.68;
+                const color = singleColor ? randomColor({
+                    limitWhite: true
+                }) : [randomColor(), randomColor({
+                    notSame: true
+                })];
+                const pistil = singleColor && Math.random() < 0.42;
+                const pistilColor = makePistilColor(color);
+                const streamers = !pistil && color !== COLOR.White && Math.random() < 0.42;
+                return {
+                    size: 500 + size * 100,
+                    starLife: 900 + size * 200,
+                    starDensity: glitter ? 1.1 : 1.5,
+                    color,
+                    glitter: glitter ? 'light' : '',
+                    glitterColor: whiteOrGold(),
+                    pistil,
+                    pistilColor,
+                    streamers
+                };
+            };
+
+            const palmShell = (size = 1) => ({
+                size: 350 + size * 75,
+                starDensity: 0.6,
+                starLife: 1800 + size * 200,
+                glitter: 'heavy'
+            });
+
+            const ringShell = (size = 1) => {
+                const color = randomColor();
+                const pistil = Math.random() < 0.75;
+                return {
+                    ring: true,
+                    color,
+                    size: 400 + size * 100,
+                    starLife: 900 + size * 200,
+                    starCount: 2.2 * PI_2 * (size + 1),
+                    pistil,
+                    pistilColor: makePistilColor(color),
+                    glitter: !pistil ? 'light' : '',
+                    glitterColor: color === COLOR.Gold ? COLOR.Gold : COLOR.White
+                };
+            };
+
+            const crossetteShell = (size = 1) => {
+                const color = randomColor({
+                    limitWhite: true
+                });
+                return {
+                    size: 300 + size * 100,
+                    starLife: 900 + size * 200,
+                    starLifeVariation: 0.22,
+                    color,
+                    crossette: true,
+                    pistil: Math.random() < 0.5,
+                    pistilColor: makePistilColor(color)
+                };
+            };
+
+            const floralShell = (size = 1) => ({
+                size: 300 + size * 120,
+                starDensity: 0.38,
+                starLife: 500 + size * 50,
+                starLifeVariation: 0.5,
+                color: Math.random() < 0.65 ? 'random' : (Math.random() < 0.15 ? randomColor() : [randomColor(),
+                    randomColor({
+                        notSame: true
+                    })
+                ]),
+                floral: true
+            });
+
+            const fallingLeavesShell = (size = 1) => ({
+                color: INVISIBLE,
+                size: 300 + size * 120,
+                starDensity: 0.38,
+                starLife: 500 + size * 50,
+                starLifeVariation: 0.5,
+                glitter: 'medium',
+                glitterColor: COLOR.Gold,
+                fallingLeaves: true
+            });
+
+            const willowShell = (size = 1) => ({
+                size: 300 + size * 100,
+                starDensity: 0.7,
+                starLife: 3000 + size * 300,
+                glitter: 'willow',
+                glitterColor: COLOR.Gold,
+                color: INVISIBLE
+            });
+
+            const crackleShell = (size = 1) => {
+                const color = Math.random() < 0.75 ? COLOR.Gold : randomColor();
+                return {
+                    size: 380 + size * 75,
+                    starDensity: 1,
+                    starLife: 600 + size * 100,
+                    starLifeVariation: 0.32,
+                    glitter: 'light',
+                    glitterColor: COLOR.Gold,
+                    color,
+                    crackle: true,
+                    pistil: Math.random() < 0.65,
+                    pistilColor: makePistilColor(color)
+                };
+            };
+
+            const horsetailShell = (size = 1) => {
+                const color = randomColor();
+                return {
+                    horsetail: true,
+                    color,
+                    size: 250 + size * 38,
+                    starDensity: 0.85 + size * 0.1,
+                    starLife: 2500 + size * 300,
+                    glitter: 'medium',
+                    glitterColor: Math.random() < 0.5 ? whiteOrGold() : color
+                };
+            };
+
+            const heartShell = (size = 1) => {
+                const color = randomColor({ limitWhite: true });
+                return {
+                    heart: true,
+                    color,
+                    size: 500 + size * 150,
+                    starLife: 1000 + size * 200,
+                    starLifeVariation: 0.2,
+                    glitter: 'light',
+                    glitterColor: color === COLOR.Gold ? COLOR.Gold : COLOR.White
+                };
+            };
+
+            function randomShellName() {
+                return Math.random() < 0.6 ? 'Crysanthemum' : shellNames[(Math.random() * (shellNames.length - 1) + 1) | 0];
+            }
+
+            function randomShell(size) {
+                if (Math.random() < 0.3) {
+                    return shellTypes['Heart'](size);
+                }
+                return shellTypes[randomShellName()](size);
+            }
+
+            function shellFromConfig(size) {
+                return shellTypes[shellNameSelector()](size);
+            }
+
+            const shellTypes = {
+                'Random': randomShell,
+                'Crackle': crackleShell,
+                'Crossette': crossetteShell,
+                'Crysanthemum': crysanthemumShell,
+                'Falling Leaves': fallingLeavesShell,
+                'Floral': floralShell,
+                'Horse Tail': horsetailShell,
+                'Palm': palmShell,
+                'Ring': ringShell,
+                'Willow': willowShell,
+                'Heart': heartShell
+            };
+
+            const shellNames = Object.keys(shellTypes);
+
+            function fitShellPositionInBoundsH(position) {
+                const edge = 0.18;
+                return (1 - edge * 2) * position + edge;
+            }
+
+            function fitShellPositionInBoundsV(position) {
+                return position * 0.75;
+            }
+
+            function getRandomShellPositionH() {
+                return fitShellPositionInBoundsH(Math.random());
+            }
+
+            function getRandomShellPositionV() {
+                return fitShellPositionInBoundsV(Math.random());
+            }
+
+            function getRandomShellSize() {
+                const baseSize = shellSizeSelector();
+                const maxVariance = Math.min(2.5, baseSize);
+                const variance = Math.random() * maxVariance;
+                const size = baseSize - variance;
+                const height = maxVariance === 0 ? Math.random() : 1 - (variance / maxVariance);
+                const centerOffset = Math.random() * (1 - height * 0.65) * 0.5;
+                const x = Math.random() < 0.5 ? 0.5 - centerOffset : 0.5 + centerOffset;
+                return {
+                    size,
+                    x: fitShellPositionInBoundsH(x),
+                    height: fitShellPositionInBoundsV(height)
+                };
+            }
+
+            function launchShellFromConfig(event) {
+                const shell = new Shell(shellFromConfig(shellSizeSelector()));
+                const w = mainStage.width;
+                const h = mainStage.height;
+                
+                let x, y;
+                if (event) {
+                    const rect = mainCanvas.getBoundingClientRect();
+                    x = (event.clientX - rect.left) / rect.width * w;
+                    y = (event.clientY - rect.top) / rect.height * h;
+                } else {
+                    x = getRandomShellPositionH() * w;
+                    y = getRandomShellPositionV() * h;
+                }
+                
+                shell.launch(x / w, y / h);
+            }
+
+            let activePointerCount = 0;
+            let isUpdatingSpeed = false;
+
+            function handlePointerStart(event) {
+                if (!canInteract()) return;
+                event.preventDefault();
+                launchShellFromConfig(event);
+            }
+
+            function handlePointerEnd(event) {
+                activePointerCount--;
+                isUpdatingSpeed = false;
+            }
+
+            function handlePointerMove(event) {
+                if (!canInteract()) return;
+                if (isUpdatingSpeed) {
+                    updateSpeedFromEvent(event);
+                }
+            }
+
+            function handleKeydown(event) {
+                if (event.keyCode === 80) {
+                    togglePause();
+                }
+            }
+
+            // 添加触摸事件支持
+            mainCanvas.addEventListener('touchstart', function(e) {
+                handlePointerStart(e.touches[0]);
+                e.preventDefault();
+            }, { passive: false });
+            
+            mainCanvas.addEventListener('touchend', handlePointerEnd);
+            mainCanvas.addEventListener('pointerdown', handlePointerStart);
+            mainCanvas.addEventListener('pointerup', handlePointerEnd);
+            mainCanvas.addEventListener('pointermove', handlePointerMove);
+            window.addEventListener('keydown', handleKeydown);
+
+            function handleResize() {
+                const w = Math.min(screenWidth, MAX_WIDTH);
+                const h = Math.min(screenHeight, MAX_HEIGHT);
+                
+                if (appNodes.stageContainer) {
+                    appNodes.stageContainer.style.width = w + 'px';
+                    appNodes.stageContainer.style.height = h + 'px';
+                }
+                stages.forEach(stage => stage.resize(w, h));
+            }
+
+            handleResize();
+
+            window.addEventListener('resize', handleResize);
+
+            let speedBarOpacity = 0;
+            let autoLaunchTime = 0;
+
+            function updateSpeedFromEvent(event) {
+                if (isUpdatingSpeed || event.y >= mainStage.height - 44) {
+                    const edge = 16;
+                    const newSpeed = (event.x - edge) / (mainStage.width - edge * 2);
+                    simSpeed = Math.min(Math.max(newSpeed, 0), 1);
+                    speedBarOpacity = 1;
+                    return true;
+                }
+                return false;
+            }
+
+            function updateGlobals(timeStep, lag) {
+                if (!isUpdatingSpeed) {
+                    speedBarOpacity -= lag / 30;
+                    if (speedBarOpacity < 0) {
+                        speedBarOpacity = 0;
+                    }
+                }
+            }
+
+            const MyMath = {
+                pointDist: (x1, y1, x2, y2) => {
+                    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                },
+                pointAngle: (x1, y1, x2, y2) => {
+                    return Math.atan2(y2 - y1, x2 - x1);
+                }
+            };
+
+            function update(frameTime, lag) {
+                if (!canInteract()) return;
+                const { width, height } = mainStage;
+                const timeStep = frameTime * simSpeed;
+                const speed = simSpeed * lag;
+                updateGlobals(timeStep, lag);
+                const starDrag = 1 - (1 - Star.airDrag) * speed;
+                const starDragHeavy = 1 - (1 - Star.airDragHeavy) * speed;
+                const sparkDrag = 1 - (1 - Spark.airDrag) * speed;
+                const gAcc = timeStep / 1000 * GRAVITY;
+                
+                COLOR_CODES_W_INVIS.forEach(color => {
+                    Star.active[color].forEach((star, i, stars) => {
+                        star.life -= timeStep;
+                        if (star.life <= 0) {
+                            stars.splice(i, 1);
+                            Star.returnInstance(star);
+                        } else {
+                            star.prevX = star.x;
+                            star.prevY = star.y;
+                            star.x += star.speedX * speed;
+                            star.y += star.speedY * speed;
+                            if (!star.heavy) {
+                                star.speedX *= starDrag;
+                                star.speedY *= starDrag;
+                            } else {
+                                star.speedX *= starDragHeavy;
+                                star.speedY *= starDragHeavy;
+                            }
+                            star.speedY += gAcc;
+                            if (star.spinRadius) {
+                                star.spinAngle += star.spinSpeed * speed;
+                                star.x += Math.sin(star.spinAngle) * star.spinRadius * speed;
+                                star.y += Math.cos(star.spinAngle) * star.spinRadius * speed;
+                            }
+                            if (star.sparkFreq) {
+                                star.sparkTimer -= timeStep;
+                                while (star.sparkTimer < 0) {
+                                    star.sparkTimer += star.sparkFreq;
+                                    Spark.add(
+                                        star.x,
+                                        star.y,
+                                        star.sparkColor,
+                                        Math.random() * PI_2,
+                                        Math.random() * star.sparkSpeed,
+                                        star.sparkLife * 0.8 + Math.random() * star.sparkLifeVariation * star.sparkLife
+                                    );
+                                }
+                            }
+                        }
+                    });
+                    
+                    Spark.active[color].forEach((spark, i, sparks) => {
+                        spark.life -= timeStep;
+                        if (spark.life <= 0) {
+                            sparks.splice(i, 1);
+                            Spark.returnInstance(spark);
+                        } else {
+                            spark.prevX = spark.x;
+                            spark.prevY = spark.y;
+                            spark.x += spark.speedX * speed;
+                            spark.y += spark.speedY * speed;
+                            spark.speedX *= sparkDrag;
+                            spark.speedY *= sparkDrag;
+                            spark.speedY += gAcc;
+                        }
+                    });
+                });
+                render(speed);
+            }
+
+            function render(speed) {
+                const { dpr, width, height } = mainStage;
+                const trailsCtx = trailsStage.ctx;
+                const mainCtx = mainStage.ctx;
+                
+                colorSky(speed);
+                
+                trailsCtx.resetTransform();
+                mainCtx.resetTransform();
+                if (dpr !== 1) {
+                    trailsCtx.scale(dpr, dpr);
+                    mainCtx.scale(dpr, dpr);
+                }
+                
+                trailsCtx.globalCompositeOperation = 'source-over';
+                trailsCtx.fillStyle = `rgba(0, 0, 0, ${store.state.longExposure ? 0.0025 : 0.1 * speed})`;
+                trailsCtx.fillRect(0, 0, width, height);
+                trailsCtx.globalCompositeOperation = 'lighten';
+                mainCtx.clearRect(0, 0, width, height);
+                
+                while (BurstFlash.active.length) {
+                    const bf = BurstFlash.active.pop();
+                    const burstGradient = trailsCtx.createRadialGradient(bf.x, bf.y, 0, bf.x, bf.y, bf.radius);
+                    burstGradient.addColorStop(0.05, 'white');
+                    burstGradient.addColorStop(0.25, 'rgba(255, 160, 20, 0.2)');
+                    burstGradient.addColorStop(1, 'rgba(255, 160, 20, 0)');
+                    trailsCtx.fillStyle = burstGradient;
+                    trailsCtx.fillRect(bf.x - bf.radius, bf.y - bf.radius, bf.radius * 2, bf.radius * 2);
+                    BurstFlash.returnInstance(bf);
+                }
+                
+                trailsCtx.lineWidth = Star.drawWidth;
+                trailsCtx.lineCap = 'round';
+                mainCtx.strokeStyle = '#fff';
+                mainCtx.lineWidth = 1;
+                mainCtx.beginPath();
+                
+                COLOR_CODES.forEach(color => {
+                    const stars = Star.active[color];
+                    trailsCtx.strokeStyle = color;
+                    trailsCtx.beginPath();
+                    stars.forEach(star => {
+                        trailsCtx.moveTo(star.x, star.y);
+                        trailsCtx.lineTo(star.prevX, star.prevY);
+                        mainCtx.moveTo(star.x, star.y);
+                        mainCtx.lineTo(star.x - star.speedX * 1.6, star.y - star.speedY * 1.6);
+                    });
+                    trailsCtx.stroke();
+                });
+                mainCtx.stroke();
+
+                trailsCtx.lineWidth = Spark.drawWidth;
+                trailsCtx.lineCap = 'butt';
+                COLOR_CODES.forEach(color => {
+                    const sparks = Spark.active[color];
+                    trailsCtx.strokeStyle = color;
+                    trailsCtx.beginPath();
+                    sparks.forEach(spark => {
+                        trailsCtx.moveTo(spark.x, spark.y);
+                        trailsCtx.lineTo(spark.prevX, spark.prevY);
+                    });
+                    trailsCtx.stroke();
+                });
+                
+                trailsCtx.resetTransform();
+                mainCtx.resetTransform();
+            }
+
+            const currentSkyColor = { r: 0, g: 0, b: 0 };
+            const targetSkyColor = { r: 0, g: 0, b: 0 };
+
+            function colorSky(speed) {
+                const maxSkySaturation = 30;
+                const maxStarCount = 500;
+                let totalStarCount = 0;
+                targetSkyColor.r = 0;
+                targetSkyColor.g = 0;
+                targetSkyColor.b = 0;
+                COLOR_CODES.forEach(color => {
+                    const tuple = COLOR_TUPLES[color];
+                    const count = Star.active[color].length;
+                    totalStarCount += count;
+                    targetSkyColor.r += tuple.r * count;
+                    targetSkyColor.g += tuple.g * count;
+                    targetSkyColor.b += tuple.b * count;
+                });
+                const intensity = Math.pow(Math.min(1, totalStarCount / maxStarCount), 0.3);
+                const maxColorComponent = Math.max(1, targetSkyColor.r, targetSkyColor.g, targetSkyColor.b);
+                targetSkyColor.r = targetSkyColor.r / maxColorComponent * maxSkySaturation * intensity;
+                targetSkyColor.g = targetSkyColor.g / maxColorComponent * maxSkySaturation * intensity;
+                targetSkyColor.b = targetSkyColor.b / maxColorComponent * maxSkySaturation * intensity;
+                const colorChange = 10;
+                currentSkyColor.r += (targetSkyColor.r - currentSkyColor.r) / colorChange * speed;
+                currentSkyColor.g += (targetSkyColor.g - currentSkyColor.g) / colorChange * speed;
+                currentSkyColor.b += (targetSkyColor.b - currentSkyColor.b) / colorChange * speed;
+                if (appNodes.canvasContainer) {
+                    appNodes.canvasContainer.style.backgroundColor =
+                        `rgb(${currentSkyColor.r | 0}, ${currentSkyColor.g | 0}, ${currentSkyColor.b | 0})`;
+                }
+            }
+
+            let lastTime = 0;
+            function animate(currentTime) {
+                const deltaTime = currentTime - lastTime;
+                lastTime = currentTime;
+                
+                if (!store.state.paused) {
+                    update(deltaTime, 1);
+                }
+                
+                requestAnimationFrame(animate);
+            }
+            requestAnimationFrame(animate);
+
+            function createParticleArc(start, arcLength, count, randomness, particleFactory) {
+                const angleDelta = arcLength / count;
+                const end = start + arcLength - (angleDelta * 0.5);
+                if (end > start) {
+                    for (let angle = start; angle < end; angle = angle + angleDelta) {
+                        particleFactory(angle + Math.random() * angleDelta * randomness);
+                    }
+                } else {
+                    for (let angle = start; angle > end; angle = angle + angleDelta) {
+                        particleFactory(angle + Math.random() * angleDelta * randomness);
+                    }
+                }
+            }
+
+            function crossetteEffect(star) {
+                const startAngle = Math.random() * PI_HALF;
+                createParticleArc(startAngle, PI_2, 4, 0.5, (angle) => {
+                    Star.add(
+                        star.x,
+                        star.y,
+                        star.color,
+                        angle,
+                        Math.random() * 0.6 + 0.75,
+                        600
+                    );
+                });
+            }
+
+            function floralEffect(star) {
+                const startAngle = Math.random() * PI_HALF;
+                createParticleArc(startAngle, PI_2, 24, 1, (angle) => {
+                    Star.add(
+                        star.x,
+                        star.y,
+                        star.color,
+                        angle,
+                        Math.pow(Math.random(), 0.45) * 2.4,
+                        1000 + Math.random() * 300,
+                        star.speedX,
+                        star.speedY
+                    );
+                });
+                BurstFlash.add(star.x, star.y, 24);
+            }
+
+            function fallingLeavesEffect(star) {
+                const startAngle = Math.random() * PI_HALF;
+                createParticleArc(startAngle, PI_2, 12, 1, (angle) => {
+                    const newStar = Star.add(
+                        star.x,
+                        star.y,
+                        INVISIBLE,
+                        angle,
+                        Math.pow(Math.random(), 0.45) * 2.4,
+                        2400 + Math.random() * 600,
+                        star.speedX,
+                        star.speedY
+                    );
+                    newStar.sparkColor = COLOR.Gold;
+                    newStar.sparkFreq = 72;
+                    newStar.sparkSpeed = 0.28;
+                    newStar.sparkLife = 750;
+                    newStar.sparkLifeVariation = 3.2;
+                });
+                BurstFlash.add(star.x, star.y, 24);
+            }
+
+            function crackleEffect(star) {
+                createParticleArc(0, PI_2, 10, 1.8, (angle) => {
+                    Spark.add(
+                        star.x,
+                        star.y,
+                        COLOR.Gold,
+                        angle,
+                        Math.pow(Math.random(), 0.45) * 2.4,
+                        300 + Math.random() * 200
+                    );
+                });
+            }
+
+            function heartEffect(star) {
+                const heartPoints = [];
+                for (let t = 0; t <= PI_2; t += 0.1) {
+                    const x = 16 * Math.pow(Math.sin(t), 3);
+                    const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+                    heartPoints.push({ x, y });
+                }
+                
+                const rotationAngle = -PI_HALF;
+                const scale = 1.8;
+                
+                heartPoints.forEach(point => {
+                    const rotatedX = point.x * Math.cos(rotationAngle) - point.y * Math.sin(rotationAngle);
+                    const rotatedY = point.x * Math.sin(rotationAngle) + point.y * Math.cos(rotationAngle);
+                    
+                    const scaledX = rotatedX * scale;
+                    const scaledY = rotatedY * scale;
+                    
+                    const angle = Math.atan2(scaledY, scaledX);
+                    const distance = Math.sqrt(scaledX * scaledX + scaledY * scaledY) * 0.05;
+                    
+                    Star.add(
+                        star.x,
+                        star.y,
+                        star.color,
+                        angle,
+                        distance,
+                        1200 + Math.random() * 400,
+                        star.speedX,
+                        star.speedY
+                    );
+                });
+                
+                BurstFlash.add(star.x, star.y, 30);
+            }
+
+            class Shell {
+                constructor(options) {
+                    Object.assign(this, options);
+                    this.starLifeVariation = options.starLifeVariation || 0.125;
+                    this.color = options.color || randomColor();
+                    this.glitterColor = options.glitterColor || this.color;
+                    if (!this.starCount) {
+                        const density = options.starDensity || 1;
+                        const scaledSize = this.size / 50 * density;
+                        this.starCount = scaledSize * scaledSize;
+                    }
+                }
+                launch(position, launchHeight) {
+                    const { width, height } = mainStage;
+                    const hpad = 60;
+                    const vpad = 50;
+                    const minHeightPercent = 0.45;
+                    const minHeight = height - height * minHeightPercent;
+                    const launchX = position * (width - hpad * 2) + hpad;
+                    const launchY = height;
+                    const burstY = minHeight - (launchHeight * (minHeight - vpad));
+                    const launchDistance = launchY - burstY;
+                    const launchVelocity = Math.pow(launchDistance * 0.04, 0.64);
+                    const comet = this.comet = Star.add(
+                        launchX,
+                        launchY,
+                        typeof this.color === 'string' && this.color !== 'random' ? this.color : COLOR.White,
+                        Math.PI,
+                        launchVelocity * (this.horsetail ? 1.2 : 1),
+                        launchVelocity * (this.horsetail ? 100 : 400)
+                    );
+                    comet.heavy = true;
+                    comet.spinRadius = 0.78;
+                    comet.sparkFreq = 16;
+                    if (this.glitter === 'willow' || this.fallingLeaves) {
+                        comet.sparkFreq = 10;
+                        comet.sparkSpeed = 0.5;
+                        comet.sparkLife = 500;
+                        comet.sparkLifeVariation = 3;
+                    }
+                    if (this.color === INVISIBLE) {
+                        comet.sparkColor = COLOR.Gold;
+                    }
+                    comet.onDeath = comet => this.burst(comet.x, comet.y);
+                }
+                burst(x, y) {
+                    const speed = this.size / 96;
+
+                    let color, onDeath, sparkFreq, sparkSpeed, sparkLife;
+                    let sparkLifeVariation = 0.25;
+                    if (this.crossette) onDeath = crossetteEffect;
+                    if (this.floral) onDeath = floralEffect;
+                    if (this.crackle) onDeath = crackleEffect;
+                    if (this.fallingLeaves) onDeath = fallingLeavesEffect;
+                    if (this.heart) onDeath = heartEffect;
+                    if (this.glitter === 'light') {
+                        sparkFreq = 200;
+                        sparkSpeed = 0.25;
+                        sparkLife = 600;
+                    } else if (this.glitter === 'medium') {
+                        sparkFreq = 100;
+                        sparkSpeed = 0.36;
+                        sparkLife = 1400;
+                    } else if (this.glitter === 'heavy') {
+                        sparkFreq = 42;
+                        sparkSpeed = 0.62;
+                        sparkLife = 2800;
+                    } else if (this.glitter === 'streamer') {
+                        sparkFreq = 20;
+                        sparkSpeed = 0.75;
+                        sparkLife = 800;
+                    } else if (this.glitter === 'willow') {
+                        sparkFreq = 72;
+                        sparkSpeed = 0.28;
+                        sparkLife = 1000;
+                        sparkLifeVariation = 3.4;
+                    }
+                    const starFactory = angle => {
+                        const star = Star.add(
+                            x,
+                            y,
+                            color || randomColor(),
+                            angle,
+                            Math.pow(Math.random(), 0.45) * speed,
+                            this.starLife + Math.random() * this.starLife * this.starLifeVariation,
+                            this.horsetail && this.comet && this.comet.speedX,
+                            this.horsetail && this.comet && this.comet.speedY
+                        );
+
+                        star.onDeath = onDeath;
+
+                        if (this.glitter) {
+                            star.sparkFreq = sparkFreq;
+                            star.sparkSpeed = sparkSpeed;
+                            star.sparkLife = sparkLife;
+                            star.sparkLifeVariation = sparkLifeVariation;
+                            star.sparkColor = this.glitterColor;
+                            star.sparkTimer = Math.random() * star.sparkFreq;
+                        }
+                    };
+                    if (typeof this.color === 'string') {
+                        if (this.color === 'random') {
+                            color = null;
+                        } else {
+                            color = this.color;
+                        }
+                        if (this.ring) {
+                            const ringStartAngle = Math.random() * Math.PI;
+                            const ringSquash = Math.pow(Math.random(), 0.45) * 0.992 + 0.008;
+                            createParticleArc(0, PI_2, this.starCount, 0, angle => {
+                                const initSpeedX = Math.sin(angle) * speed * ringSquash;
+                                const initSpeedY = Math.cos(angle) * speed;
+                                const newSpeed = MyMath.pointDist(0, 0, initSpeedX, initSpeedY);
+                                const newAngle = MyMath.pointAngle(0, 0, initSpeedX, initSpeedY) +
+                                    ringStartAngle;
+                                const star = Star.add(
+                                    x,
+                                    y,
+                                    color,
+                                    newAngle,
+                                    newSpeed,
+                                    this.starLife + Math.random() * this.starLife * this.starLifeVariation
+                                );
+                                if (this.glitter) {
+                                    star.sparkFreq = sparkFreq;
+                                    star.sparkSpeed = sparkSpeed;
+                                    star.sparkLife = sparkLife;
+                                    star.sparkLifeVariation = sparkLifeVariation;
+                                    star.sparkColor = this.glitterColor;
+                                    star.sparkTimer = Math.random() * star.sparkFreq;
+                                }
+                            });
+                        }
+                        else if (this.heart) {
+                            heartEffect({x, y, color: this.color});
+                        }
+                        else {
+                            createParticleArc(0, PI_2, this.starCount, 1, starFactory);
+                        }
+                    } else if (Array.isArray(this.color)) {
+                        let start, start2, arc;
+                        if (Math.random() < 0.5) {
+                            start = Math.random() * Math.PI;
+                            start2 = start + Math.PI;
+                            arc = Math.PI;
+                        } else {
+                            start = 0;
+                            start2 = 0;
+                            arc = PI_2;
+                        }
+                        color = this.color[0];
+                        createParticleArc(start, arc, this.starCount / 2, 1, starFactory);
+                        color = this.color[1];
+                        createParticleArc(start2, arc, this.starCount / 2, 1, starFactory)
+                    }
+                    if (this.pistil) {
+                        const innerShell = new Shell({
+                            size: this.size * 0.5,
+                            starLife: this.starLife * 0.7,
+                            starLifeVariation: this.starLifeVariation,
+                            starDensity: 1.65,
+                            color: this.pistilColor,
+                            glitter: 'light',
+                            glitterColor: this.pistilColor === COLOR.Gold ? COLOR.Gold : COLOR.White
+                        });
+                        innerShell.burst(x, y);
+                    }
+                    if (this.streamers) {
+                        const innerShell = new Shell({
+                            size: this.size,
+                            starLife: this.starLife * 0.8,
+                            starLifeVariation: this.starLifeVariation,
+                            starCount: Math.max(6, this.size / 45) | 0,
+                            color: COLOR.White,
+                            glitter: 'streamer'
+                        });
+                        innerShell.burst(x, y);
+                    }
+                    BurstFlash.add(x, y, this.size / 8);
+                }
+            }
+
+            const BurstFlash = {
+                active: [],
+                _pool: [],
+                _new() {
+                    return {};
+                },
+                add(x, y, radius) {
+                    const instance = this._pool.pop() || this._new();
+                    instance.x = x;
+                    instance.y = y;
+                    instance.radius = radius;
+                    this.active.push(instance);
+                    return instance;
+                },
+                returnInstance(instance) {
+                    this._pool.push(instance);
+                }
+            };
+
+            function createParticleCollection() {
+                const collection = {};
+                COLOR_CODES_W_INVIS.forEach(color => {
+                    collection[color] = [];
+                });
+                return collection;
+            }
+
+            const Star = {
+                drawWidth: 3,
+                airDrag: 0.98,
+                airDragHeavy: 0.992,
+                active: createParticleCollection(),
+                _pool: [],
+                _new() {
+                    return {};
+                },
+
+                add(x, y, color, angle, speed, life, speedOffX, speedOffY) {
+                    const instance = this._pool.pop() || this._new();
+                    instance.heavy = false;
+                    instance.x = x;
+                    instance.y = y;
+                    instance.prevX = x;
+                    instance.prevY = y;
+                    instance.color = color;
+                    instance.speedX = Math.sin(angle) * speed + (speedOffX || 0);
+                    instance.speedY = Math.cos(angle) * speed + (speedOffY || 0);
+                    instance.life = life;
+                    instance.spinAngle = Math.random() * PI_2;
+                    instance.spinSpeed = 0.8;
+                    instance.spinRadius = 0;
+                    instance.sparkFreq = 0;
+                    instance.sparkSpeed = 1;
+                    instance.sparkTimer = 0;
+                    instance.sparkColor = color;
+                    instance.sparkLife = 750;
+                    instance.sparkLifeVariation = 0.25;
+                    this.active[color].push(instance);
+                    return instance;
+                },
+
+                returnInstance(instance) {
+                    instance.onDeath && instance.onDeath(instance);
+                    instance.onDeath = null;
+                    this._pool.push(instance);
+                }
+            };
+
+            const Spark = {
+                drawWidth: 0.75,
+                airDrag: 0.9,
+                active: createParticleCollection(),
+                _pool: [],
+                _new() {
+                    return {};
+                },
+
+                add(x, y, color, angle, speed, life) {
+                    const instance = this._pool.pop() || this._new();
+                    instance.x = x;
+                    instance.y = y;
+                    instance.prevX = x;
+                    instance.prevY = y;
+                    instance.color = color;
+                    instance.speedX = Math.sin(angle) * speed;
+                    instance.speedY = Math.cos(angle) * speed;
+                    instance.life = life;
+                    this.active[color].push(instance);
+                    return instance;
+                },
+
+                returnInstance(instance) {
+                    this._pool.push(instance);
+                }
+            };
+
+            // 初始显示一个烟花
+            setTimeout(() => {
+                const shell = new Shell(crysanthemumShell(shellSizeSelector()));
+                shell.launch(0.5, 0.5);
+            }, 500);
+        }
+
+        // 初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
