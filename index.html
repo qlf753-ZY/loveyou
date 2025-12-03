@@ -19,46 +19,45 @@
             position: fixed;
         }
         
-        body {
-            font-family: 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #ffafbd, #ffc3a0);
-            position: relative;
-        }
-        
-        /* 旋转容器 - 只在竖屏时旋转 */
-        .rotation-container {
+        /* 强制横屏容器 */
+        .force-landscape {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            transition: transform 0.3s ease;
         }
         
-        /* 竖屏状态 - 旋转内容 */
+        /* 竖屏时旋转90度 */
         @media screen and (orientation: portrait) {
-            .rotation-container {
-                /* 将内容旋转90度 */
+            .force-landscape {
                 transform: rotate(90deg);
-                transform-origin: left top;
+                transform-origin: center center;
                 width: 100vh;
                 height: 100vw;
-                left: 100vw;
-                top: 0;
-                transform: rotate(90deg) translateY(-100%);
-                transform-origin: left top;
+                top: 50%;
+                left: 50%;
+                margin-top: -50vw;
+                margin-left: -50vh;
             }
         }
         
-        /* 横屏状态 - 正常显示 */
+        /* 横屏时正常显示 */
         @media screen and (orientation: landscape) {
-            .rotation-container {
+            .force-landscape {
                 transform: none;
                 width: 100vw;
                 height: 100vh;
-                left: 0;
                 top: 0;
+                left: 0;
+                margin: 0;
             }
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #ffafbd, #ffc3a0);
+            position: relative;
         }
         
         /* 初始欢迎页面样式 */
@@ -221,8 +220,8 @@
     </style>
 </head>
 <body>
-    <!-- 旋转容器 -->
-    <div class="rotation-container" id="rotationContainer">
+    <!-- 强制横屏容器 -->
+    <div class="force-landscape">
         <!-- 初始欢迎页面 -->
         <div class="welcome-screen" id="welcomeScreen">
             <div class="welcome-title">请我最爱的人收下这份礼物</div>
@@ -245,7 +244,7 @@
     </div>
 
     <script>
-        // 配置参数 - 自适应调整
+        // 配置参数
         const CONFIG = {
             numWindows: 60,
             heartScale: 15,
@@ -284,22 +283,20 @@
         let loadedImages = [];
         let heartPoints = [];
 
-        // 获取正确的显示尺寸（考虑旋转）
+        // 获取实际尺寸（考虑旋转）
         function getActualDimensions() {
             const isPortrait = window.innerHeight > window.innerWidth;
             if (isPortrait) {
-                // 竖屏时，页面被旋转，所以实际显示尺寸是交换的
+                // 竖屏：内容旋转了90度，所以宽高要交换
                 return {
                     width: window.innerHeight,
-                    height: window.innerWidth,
-                    isRotated: true
+                    height: window.innerWidth
                 };
             } else {
-                // 横屏时，正常显示
+                // 横屏：正常尺寸
                 return {
                     width: window.innerWidth,
-                    height: window.innerHeight,
-                    isRotated: false
+                    height: window.innerHeight
                 };
             }
         }
@@ -329,7 +326,6 @@
             screenWidth = actual.width;
             screenHeight = actual.height;
             
-            // 更新canvas尺寸
             canvas.width = screenWidth;
             canvas.height = screenHeight;
             
@@ -359,7 +355,6 @@
             const countdownElement = document.getElementById('countdown');
             const welcomeScreen = document.getElementById('welcomeScreen');
             
-            // 立即显示3
             countdownElement.textContent = count;
             
             const countdownInterval = setInterval(() => {
@@ -446,7 +441,6 @@
             const window = document.createElement('div');
             window.className = 'tip-window';
             
-            // 计算自适应窗口尺寸
             const windowWidth = Math.min(CONFIG.windowWidth, screenWidth * 0.4);
             const windowHeight = CONFIG.windowHeight;
             
@@ -454,20 +448,16 @@
             window.style.top = `${pos.y - windowHeight / 2}px`;
             window.style.width = `${windowWidth}px`;
             
-            // 随机背景色
             const bgColor = BG_COLORS[Math.floor(Math.random() * BG_COLORS.length)];
             window.style.backgroundColor = bgColor;
             
-            // 随机提示文本
             const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
             
-            // 创建文本元素
             const textEl = document.createElement('div');
             textEl.className = 'tip-text';
             textEl.textContent = tip;
             window.appendChild(textEl);
             
-            // 存储窗口信息
             const windowInfo = {
                 element: window,
                 originalX: pos.x - windowWidth / 2,
@@ -485,17 +475,15 @@
                 height: windowHeight
             };
             
-            // 绑定双击事件
             window.addEventListener('dblclick', () => {
                 returnToHeart(windowInfo);
             });
             
-            // 添加触摸事件支持
             window.addEventListener('touchstart', (e) => {
                 e.preventDefault();
             }, { passive: false });
             
-            document.getElementById('rotationContainer').appendChild(window);
+            document.querySelector('.force-landscape').appendChild(window);
             windowList.push(windowInfo);
             
             return windowInfo;
@@ -514,8 +502,6 @@
             windowInfo.element.appendChild(imgEl);
             windowInfo.imageElement = imgEl;
             windowInfo.hasImage = true;
-            
-            // 动态调整高度
             windowInfo.element.style.height = 'auto';
         }
 
@@ -556,7 +542,6 @@
         function showSpreadWindows() {
             windowList.forEach((windowInfo) => {
                 if (windowInfo.element) {
-                    // 计算安全位置，避免超出屏幕
                     const maxX = screenWidth - windowInfo.width;
                     const maxY = screenHeight - (windowInfo.hasImage ? CONFIG.expandedHeight : windowInfo.height);
                     
@@ -584,7 +569,6 @@
             const fireworksContainer = document.getElementById('fireworks-container');
             fireworksContainer.style.display = 'block';
             
-            // 确保烟花canvas尺寸正确
             const trailsCanvas = document.getElementById('trails-canvas');
             const mainCanvas = document.getElementById('main-canvas');
             
@@ -607,7 +591,6 @@
             function updatePosition(currentTime) {
                 const elapsed = currentTime - startTime;
                 const progress = Math.min(elapsed / duration, 1);
-                
                 const easeProgress = 1 - Math.pow(1 - progress, 2);
                 
                 windowInfo.currentX = startX + (targetX - startX) * easeProgress;
@@ -687,11 +670,9 @@
         // ==================== 烟花代码 ====================
         function initFireworks() {
             'use strict';
-            console.clear();
-
+            
             const IS_MOBILE = window.innerWidth <= 640;
             const IS_DESKTOP = window.innerWidth > 800;
-            const IS_HEADER = IS_DESKTOP && window.innerHeight < 300;
             const MAX_WIDTH = 7680;
             const MAX_HEIGHT = 4320;
             const GRAVITY = 0.9;
@@ -714,10 +695,9 @@
                     longExposure: false,
                     config: {
                         shell: 'Random',
-                        size: IS_DESKTOP && !IS_HEADER ? '3' : '1',
+                        size: IS_DESKTOP ? '3' : '1',
                         autoLaunch: true,
-                        finale: false,
-                        hideControls: IS_HEADER
+                        finale: false
                     }
                 },
                 setState(nextState) {
@@ -741,10 +721,6 @@
                 stageContainer: document.querySelector('.fireworks-stage-container'),
                 canvasContainer: document.querySelector('.fireworks-canvas-container')
             };
-
-            const loadingInit = document.getElementById('loading-init');
-            if (loadingInit) loadingInit.remove();
-            if (appNodes.stageContainer) appNodes.stageContainer.classList.remove('remove');
 
             const COLOR_NAMES = Object.keys(COLOR);
             const COLOR_CODES = COLOR_NAMES.map(colorName => COLOR[colorName]);
@@ -800,7 +776,6 @@
                 return;
             }
 
-            // 确保canvas尺寸正确
             trailsCanvas.width = screenWidth;
             trailsCanvas.height = screenHeight;
             mainCanvas.width = screenWidth;
@@ -836,23 +811,10 @@
                     this.ctx.webkitImageSmoothingEnabled = false;
                     this.ctx.msImageSmoothingEnabled = false;
                 }
-                
-                addEventListener(event, callback) {
-                    if (this.eventListeners[event]) {
-                        this.eventListeners[event].push(callback);
-                    }
-                }
-                
-                trigger(event, ...args) {
-                    if (this.eventListeners[event]) {
-                        this.eventListeners[event].forEach(callback => callback(...args));
-                    }
-                }
             }
 
             const trailsStage = new Stage(trailsCanvas);
             const mainStage = new Stage(mainCanvas);
-            const stages = [trailsStage, mainStage];
 
             trailsStage.ctx.fillStyle = '#000';
             trailsStage.ctx.fillRect(0, 0, trailsStage.width, trailsStage.height);
@@ -863,6 +825,7 @@
                 }) : whiteOrGold();
             }
 
+            // 烟花类型定义
             const crysanthemumShell = (size = 1) => {
                 const glitter = Math.random() < 0.25;
                 const singleColor = Math.random() < 0.68;
@@ -887,106 +850,6 @@
                 };
             };
 
-            const palmShell = (size = 1) => ({
-                size: 350 + size * 75,
-                starDensity: 0.6,
-                starLife: 1800 + size * 200,
-                glitter: 'heavy'
-            });
-
-            const ringShell = (size = 1) => {
-                const color = randomColor();
-                const pistil = Math.random() < 0.75;
-                return {
-                    ring: true,
-                    color,
-                    size: 400 + size * 100,
-                    starLife: 900 + size * 200,
-                    starCount: 2.2 * PI_2 * (size + 1),
-                    pistil,
-                    pistilColor: makePistilColor(color),
-                    glitter: !pistil ? 'light' : '',
-                    glitterColor: color === COLOR.Gold ? COLOR.Gold : COLOR.White
-                };
-            };
-
-            const crossetteShell = (size = 1) => {
-                const color = randomColor({
-                    limitWhite: true
-                });
-                return {
-                    size: 300 + size * 100,
-                    starLife: 900 + size * 200,
-                    starLifeVariation: 0.22,
-                    color,
-                    crossette: true,
-                    pistil: Math.random() < 0.5,
-                    pistilColor: makePistilColor(color)
-                };
-            };
-
-            const floralShell = (size = 1) => ({
-                size: 300 + size * 120,
-                starDensity: 0.38,
-                starLife: 500 + size * 50,
-                starLifeVariation: 0.5,
-                color: Math.random() < 0.65 ? 'random' : (Math.random() < 0.15 ? randomColor() : [randomColor(),
-                    randomColor({
-                        notSame: true
-                    })
-                ]),
-                floral: true
-            });
-
-            const fallingLeavesShell = (size = 1) => ({
-                color: INVISIBLE,
-                size: 300 + size * 120,
-                starDensity: 0.38,
-                starLife: 500 + size * 50,
-                starLifeVariation: 0.5,
-                glitter: 'medium',
-                glitterColor: COLOR.Gold,
-                fallingLeaves: true
-            });
-
-            const willowShell = (size = 1) => ({
-                size: 300 + size * 100,
-                starDensity: 0.7,
-                starLife: 3000 + size * 300,
-                glitter: 'willow',
-                glitterColor: COLOR.Gold,
-                color: INVISIBLE
-            });
-
-            const crackleShell = (size = 1) => {
-                const color = Math.random() < 0.75 ? COLOR.Gold : randomColor();
-                return {
-                    size: 380 + size * 75,
-                    starDensity: 1,
-                    starLife: 600 + size * 100,
-                    starLifeVariation: 0.32,
-                    glitter: 'light',
-                    glitterColor: COLOR.Gold,
-                    color,
-                    crackle: true,
-                    pistil: Math.random() < 0.65,
-                    pistilColor: makePistilColor(color)
-                };
-            };
-
-            const horsetailShell = (size = 1) => {
-                const color = randomColor();
-                return {
-                    horsetail: true,
-                    color,
-                    size: 250 + size * 38,
-                    starDensity: 0.85 + size * 0.1,
-                    starLife: 2500 + size * 300,
-                    glitter: 'medium',
-                    glitterColor: Math.random() < 0.5 ? whiteOrGold() : color
-                };
-            };
-
             const heartShell = (size = 1) => {
                 const color = randomColor({ limitWhite: true });
                 return {
@@ -1000,36 +863,15 @@
                 };
             };
 
-            function randomShellName() {
-                return Math.random() < 0.6 ? 'Crysanthemum' : shellNames[(Math.random() * (shellNames.length - 1) + 1) | 0];
-            }
-
-            function randomShell(size) {
-                if (Math.random() < 0.3) {
-                    return shellTypes['Heart'](size);
-                }
-                return shellTypes[randomShellName()](size);
-            }
+            const shellTypes = {
+                'Random': crysanthemumShell,
+                'Crysanthemum': crysanthemumShell,
+                'Heart': heartShell
+            };
 
             function shellFromConfig(size) {
                 return shellTypes[shellNameSelector()](size);
             }
-
-            const shellTypes = {
-                'Random': randomShell,
-                'Crackle': crackleShell,
-                'Crossette': crossetteShell,
-                'Crysanthemum': crysanthemumShell,
-                'Falling Leaves': fallingLeavesShell,
-                'Floral': floralShell,
-                'Horse Tail': horsetailShell,
-                'Palm': palmShell,
-                'Ring': ringShell,
-                'Willow': willowShell,
-                'Heart': heartShell
-            };
-
-            const shellNames = Object.keys(shellTypes);
 
             function fitShellPositionInBoundsH(position) {
                 const edge = 0.18;
@@ -1046,21 +888,6 @@
 
             function getRandomShellPositionV() {
                 return fitShellPositionInBoundsV(Math.random());
-            }
-
-            function getRandomShellSize() {
-                const baseSize = shellSizeSelector();
-                const maxVariance = Math.min(2.5, baseSize);
-                const variance = Math.random() * maxVariance;
-                const size = baseSize - variance;
-                const height = maxVariance === 0 ? Math.random() : 1 - (variance / maxVariance);
-                const centerOffset = Math.random() * (1 - height * 0.65) * 0.5;
-                const x = Math.random() < 0.5 ? 0.5 - centerOffset : 0.5 + centerOffset;
-                return {
-                    size,
-                    x: fitShellPositionInBoundsH(x),
-                    height: fitShellPositionInBoundsV(height)
-                };
             }
 
             function launchShellFromConfig(event) {
@@ -1081,10 +908,6 @@
                 shell.launch(x / w, y / h);
             }
 
-            let activePointerCount = 0;
-            let isUpdatingSpeed = false;
-
-            // 修复闪烁：添加防抖处理
             let lastLaunchTime = 0;
             const MIN_LAUNCH_INTERVAL = 200;
 
@@ -1093,7 +916,6 @@
                 event.preventDefault();
                 event.stopPropagation();
                 
-                // 防抖处理，防止快速连续点击
                 const now = Date.now();
                 if (now - lastLaunchTime < MIN_LAUNCH_INTERVAL) {
                     return;
@@ -1103,47 +925,14 @@
                 launchShellFromConfig(event);
             }
 
-            function handlePointerEnd(event) {
-                event.preventDefault();
-                activePointerCount--;
-                isUpdatingSpeed = false;
-            }
-
-            function handlePointerMove(event) {
-                if (!canInteract()) return;
-                if (isUpdatingSpeed) {
-                    updateSpeedFromEvent(event);
-                }
-            }
-
-            function handleKeydown(event) {
-                if (event.keyCode === 80) {
-                    togglePause();
-                }
-            }
-
-            // 修复闪烁：优化事件监听器
-            function setupEventListeners() {
-                const canvasContainer = document.querySelector('.fireworks-canvas-container');
-                if (!canvasContainer) return;
-                
+            // 事件监听
+            const canvasContainer = document.querySelector('.fireworks-canvas-container');
+            if (canvasContainer) {
                 canvasContainer.addEventListener('touchstart', handlePointerStart, { 
                     passive: false,
                     capture: true 
                 });
-                canvasContainer.addEventListener('touchend', handlePointerEnd, { 
-                    passive: false,
-                    capture: true 
-                });
                 canvasContainer.addEventListener('pointerdown', handlePointerStart, { 
-                    passive: false,
-                    capture: true 
-                });
-                canvasContainer.addEventListener('pointerup', handlePointerEnd, { 
-                    passive: false,
-                    capture: true 
-                });
-                canvasContainer.addEventListener('pointermove', handlePointerMove, { 
                     passive: false,
                     capture: true 
                 });
@@ -1152,8 +941,6 @@
                     e.preventDefault();
                 }, { passive: false });
             }
-
-            setupEventListeners();
             
             mainCanvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
@@ -1165,61 +952,12 @@
                 handlePointerStart(e);
             }, { passive: false });
 
-            window.addEventListener('keydown', handleKeydown);
-
-            function handleResize() {
-                const w = Math.min(screenWidth, MAX_WIDTH);
-                const h = Math.min(screenHeight, MAX_HEIGHT);
-                
-                if (appNodes.stageContainer) {
-                    appNodes.stageContainer.style.width = w + 'px';
-                    appNodes.stageContainer.style.height = h + 'px';
-                }
-                stages.forEach(stage => stage.resize(w, h));
-            }
-
-            handleResize();
-
-            window.addEventListener('resize', handleResize);
-
-            let speedBarOpacity = 0;
-            let autoLaunchTime = 0;
-
-            function updateSpeedFromEvent(event) {
-                if (isUpdatingSpeed || event.y >= mainStage.height - 44) {
-                    const edge = 16;
-                    const newSpeed = (event.x - edge) / (mainStage.width - edge * 2);
-                    simSpeed = Math.min(Math.max(newSpeed, 0), 1);
-                    speedBarOpacity = 1;
-                    return true;
-                }
-                return false;
-            }
-
-            function updateGlobals(timeStep, lag) {
-                if (!isUpdatingSpeed) {
-                    speedBarOpacity -= lag / 30;
-                    if (speedBarOpacity < 0) {
-                        speedBarOpacity = 0;
-                    }
-                }
-            }
-
-            const MyMath = {
-                pointDist: (x1, y1, x2, y2) => {
-                    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-                },
-                pointAngle: (x1, y1, x2, y2) => {
-                    return Math.atan2(y2 - y1, x2 - x1);
-                }
-            };
-
+            // 更新函数
             function update(frameTime, lag) {
                 if (!canInteract()) return;
                 const { width, height } = mainStage;
                 const timeStep = frameTime * simSpeed;
                 const speed = simSpeed * lag;
-                updateGlobals(timeStep, lag);
                 const starDrag = 1 - (1 - Star.airDrag) * speed;
                 const starDragHeavy = 1 - (1 - Star.airDragHeavy) * speed;
                 const sparkDrag = 1 - (1 - Spark.airDrag) * speed;
@@ -1290,7 +1028,18 @@
                 const trailsCtx = trailsStage.ctx;
                 const mainCtx = mainStage.ctx;
                 
-                colorSky(speed);
+                // 更新天空颜色
+                const currentSkyColor = { r: 0, g: 0, b: 0 };
+                const targetSkyColor = { r: 0, g: 0, b: 0 };
+                let totalStarCount = 0;
+                COLOR_CODES.forEach(color => {
+                    const tuple = COLOR_TUPLES[color];
+                    const count = Star.active[color].length;
+                    totalStarCount += count;
+                    targetSkyColor.r += tuple.r * count;
+                    targetSkyColor.g += tuple.g * count;
+                    targetSkyColor.b += tuple.b * count;
+                });
                 
                 trailsCtx.setTransform(1, 0, 0, 1, 0, 0);
                 mainCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1307,22 +1056,9 @@
                 
                 mainCtx.clearRect(0, 0, width, height);
                 
-                while (BurstFlash.active.length) {
-                    const bf = BurstFlash.active.pop();
-                    const burstGradient = trailsCtx.createRadialGradient(bf.x, bf.y, 0, bf.x, bf.y, bf.radius);
-                    burstGradient.addColorStop(0.05, 'white');
-                    burstGradient.addColorStop(0.25, 'rgba(255, 160, 20, 0.2)');
-                    burstGradient.addColorStop(1, 'rgba(255, 160, 20, 0)');
-                    trailsCtx.fillStyle = burstGradient;
-                    trailsCtx.fillRect(bf.x - bf.radius, bf.y - bf.radius, bf.radius * 2, bf.radius * 2);
-                    BurstFlash.returnInstance(bf);
-                }
-                
+                // 绘制星迹
                 trailsCtx.lineWidth = Star.drawWidth;
                 trailsCtx.lineCap = 'round';
-                mainCtx.strokeStyle = '#fff';
-                mainCtx.lineWidth = 1;
-                mainCtx.beginPath();
                 
                 COLOR_CODES.forEach(color => {
                     const stars = Star.active[color];
@@ -1331,13 +1067,11 @@
                     stars.forEach(star => {
                         trailsCtx.moveTo(star.x, star.y);
                         trailsCtx.lineTo(star.prevX, star.prevY);
-                        mainCtx.moveTo(star.x, star.y);
-                        mainCtx.lineTo(star.x - star.speedX * 1.6, star.y - star.speedY * 1.6);
                     });
                     trailsCtx.stroke();
                 });
-                mainCtx.stroke();
-
+                
+                // 绘制火花
                 trailsCtx.lineWidth = Spark.drawWidth;
                 trailsCtx.lineCap = 'butt';
                 COLOR_CODES.forEach(color => {
@@ -1350,42 +1084,6 @@
                     });
                     trailsCtx.stroke();
                 });
-                
-                trailsCtx.setTransform(1, 0, 0, 1, 0, 0);
-                mainCtx.setTransform(1, 0, 0, 1, 0, 0);
-            }
-
-            const currentSkyColor = { r: 0, g: 0, b: 0 };
-            const targetSkyColor = { r: 0, g: 0, b: 0 };
-
-            function colorSky(speed) {
-                const maxSkySaturation = 30;
-                const maxStarCount = 500;
-                let totalStarCount = 0;
-                targetSkyColor.r = 0;
-                targetSkyColor.g = 0;
-                targetSkyColor.b = 0;
-                COLOR_CODES.forEach(color => {
-                    const tuple = COLOR_TUPLES[color];
-                    const count = Star.active[color].length;
-                    totalStarCount += count;
-                    targetSkyColor.r += tuple.r * count;
-                    targetSkyColor.g += tuple.g * count;
-                    targetSkyColor.b += tuple.b * count;
-                });
-                const intensity = Math.pow(Math.min(1, totalStarCount / maxStarCount), 0.3);
-                const maxColorComponent = Math.max(1, targetSkyColor.r, targetSkyColor.g, targetSkyColor.b);
-                targetSkyColor.r = targetSkyColor.r / maxColorComponent * maxSkySaturation * intensity;
-                targetSkyColor.g = targetSkyColor.g / maxColorComponent * maxSkySaturation * intensity;
-                targetSkyColor.b = targetSkyColor.b / maxColorComponent * maxSkySaturation * intensity;
-                const colorChange = 10;
-                currentSkyColor.r += (targetSkyColor.r - currentSkyColor.r) / colorChange * speed;
-                currentSkyColor.g += (targetSkyColor.g - currentSkyColor.g) / colorChange * speed;
-                currentSkyColor.b += (targetSkyColor.b - currentSkyColor.b) / colorChange * speed;
-                if (appNodes.canvasContainer) {
-                    appNodes.canvasContainer.style.backgroundColor =
-                        `rgb(${currentSkyColor.r | 0}, ${currentSkyColor.g | 0}, ${currentSkyColor.b | 0})`;
-                }
             }
 
             let lastTime = 0;
@@ -1401,86 +1099,6 @@
             }
             
             requestAnimationFrame(animate);
-
-            function createParticleArc(start, arcLength, count, randomness, particleFactory) {
-                const angleDelta = arcLength / count;
-                const end = start + arcLength - (angleDelta * 0.5);
-                if (end > start) {
-                    for (let angle = start; angle < end; angle = angle + angleDelta) {
-                        particleFactory(angle + Math.random() * angleDelta * randomness);
-                    }
-                } else {
-                    for (let angle = start; angle > end; angle = angle + angleDelta) {
-                        particleFactory(angle + Math.random() * angleDelta * randomness);
-                    }
-                }
-            }
-
-            function crossetteEffect(star) {
-                const startAngle = Math.random() * PI_HALF;
-                createParticleArc(startAngle, PI_2, 4, 0.5, (angle) => {
-                    Star.add(
-                        star.x,
-                        star.y,
-                        star.color,
-                        angle,
-                        Math.random() * 0.6 + 0.75,
-                        600
-                    );
-                });
-            }
-
-            function floralEffect(star) {
-                const startAngle = Math.random() * PI_HALF;
-                createParticleArc(startAngle, PI_2, 24, 1, (angle) => {
-                    Star.add(
-                        star.x,
-                        star.y,
-                        star.color,
-                        angle,
-                        Math.pow(Math.random(), 0.45) * 2.4,
-                        1000 + Math.random() * 300,
-                        star.speedX,
-                        star.speedY
-                    );
-                });
-                BurstFlash.add(star.x, star.y, 24);
-            }
-
-            function fallingLeavesEffect(star) {
-                const startAngle = Math.random() * PI_HALF;
-                createParticleArc(startAngle, PI_2, 12, 1, (angle) => {
-                    const newStar = Star.add(
-                        star.x,
-                        star.y,
-                        INVISIBLE,
-                        angle,
-                        Math.pow(Math.random(), 0.45) * 2.4,
-                        2400 + Math.random() * 600,
-                        star.speedX,
-                        star.speedY
-                    );
-                    newStar.sparkColor = COLOR.Gold;
-                    newStar.sparkFreq = 72;
-                    newStar.sparkSpeed = 0.28;
-                    newStar.sparkLife = 750;
-                    newStar.sparkLifeVariation = 3.2;
-                });
-                BurstFlash.add(star.x, star.y, 24);
-            }
-
-            function crackleEffect(star) {
-                createParticleArc(0, PI_2, 10, 1.8, (angle) => {
-                    Spark.add(
-                        star.x,
-                        star.y,
-                        COLOR.Gold,
-                        angle,
-                        Math.pow(Math.random(), 0.45) * 2.4,
-                        300 + Math.random() * 200
-                    );
-                });
-            }
 
             function heartEffect(star) {
                 const heartPoints = [];
@@ -1552,12 +1170,6 @@
                     comet.heavy = true;
                     comet.spinRadius = 0.78;
                     comet.sparkFreq = 16;
-                    if (this.glitter === 'willow' || this.fallingLeaves) {
-                        comet.sparkFreq = 10;
-                        comet.sparkSpeed = 0.5;
-                        comet.sparkLife = 500;
-                        comet.sparkLifeVariation = 3;
-                    }
                     if (this.color === INVISIBLE) {
                         comet.sparkColor = COLOR.Gold;
                     }
@@ -1581,20 +1193,8 @@
                         sparkFreq = 100;
                         sparkSpeed = 0.36;
                         sparkLife = 1400;
-                    } else if (this.glitter === 'heavy') {
-                        sparkFreq = 42;
-                        sparkSpeed = 0.62;
-                        sparkLife = 2800;
-                    } else if (this.glitter === 'streamer') {
-                        sparkFreq = 20;
-                        sparkSpeed = 0.75;
-                        sparkLife = 800;
-                    } else if (this.glitter === 'willow') {
-                        sparkFreq = 72;
-                        sparkSpeed = 0.28;
-                        sparkLife = 1000;
-                        sparkLifeVariation = 3.4;
                     }
+                    
                     const starFactory = angle => {
                         const star = Star.add(
                             x,
@@ -1618,84 +1218,20 @@
                             star.sparkTimer = Math.random() * star.sparkFreq;
                         }
                     };
+                    
                     if (typeof this.color === 'string') {
                         if (this.color === 'random') {
                             color = null;
                         } else {
                             color = this.color;
                         }
-                        if (this.ring) {
-                            const ringStartAngle = Math.random() * Math.PI;
-                            const ringSquash = Math.pow(Math.random(), 0.45) * 0.992 + 0.008;
-                            createParticleArc(0, PI_2, this.starCount, 0, angle => {
-                                const initSpeedX = Math.sin(angle) * speed * ringSquash;
-                                const initSpeedY = Math.cos(angle) * speed;
-                                const newSpeed = MyMath.pointDist(0, 0, initSpeedX, initSpeedY);
-                                const newAngle = MyMath.pointAngle(0, 0, initSpeedX, initSpeedY) +
-                                    ringStartAngle;
-                                const star = Star.add(
-                                    x,
-                                    y,
-                                    color,
-                                    newAngle,
-                                    newSpeed,
-                                    this.starLife + Math.random() * this.starLife * this.starLifeVariation
-                                );
-                                if (this.glitter) {
-                                    star.sparkFreq = sparkFreq;
-                                    star.sparkSpeed = sparkSpeed;
-                                    star.sparkLife = sparkLife;
-                                    star.sparkLifeVariation = sparkLifeVariation;
-                                    star.sparkColor = this.glitterColor;
-                                    star.sparkTimer = Math.random() * star.sparkFreq;
-                                }
-                            });
-                        }
-                        else if (this.heart) {
+                        if (this.heart) {
                             heartEffect({x, y, color: this.color});
-                        }
-                        else {
+                        } else {
                             createParticleArc(0, PI_2, this.starCount, 1, starFactory);
                         }
-                    } else if (Array.isArray(this.color)) {
-                        let start, start2, arc;
-                        if (Math.random() < 0.5) {
-                            start = Math.random() * Math.PI;
-                            start2 = start + Math.PI;
-                            arc = Math.PI;
-                        } else {
-                            start = 0;
-                            start2 = 0;
-                            arc = PI_2;
-                        }
-                        color = this.color[0];
-                        createParticleArc(start, arc, this.starCount / 2, 1, starFactory);
-                        color = this.color[1];
-                        createParticleArc(start2, arc, this.starCount / 2, 1, starFactory)
                     }
-                    if (this.pistil) {
-                        const innerShell = new Shell({
-                            size: this.size * 0.5,
-                            starLife: this.starLife * 0.7,
-                            starLifeVariation: this.starLifeVariation,
-                            starDensity: 1.65,
-                            color: this.pistilColor,
-                            glitter: 'light',
-                            glitterColor: this.pistilColor === COLOR.Gold ? COLOR.Gold : COLOR.White
-                        });
-                        innerShell.burst(x, y);
-                    }
-                    if (this.streamers) {
-                        const innerShell = new Shell({
-                            size: this.size,
-                            starLife: this.starLife * 0.8,
-                            starLifeVariation: this.starLifeVariation,
-                            starCount: Math.max(6, this.size / 45) | 0,
-                            color: COLOR.White,
-                            glitter: 'streamer'
-                        });
-                        innerShell.burst(x, y);
-                    }
+                    
                     BurstFlash.add(x, y, this.size / 8);
                 }
             }
@@ -1795,6 +1331,25 @@
                     this._pool.push(instance);
                 }
             };
+
+            function createParticleArc(start, arcLength, count, randomness, particleFactory) {
+                const angleDelta = arcLength / count;
+                const end = start + arcLength - (angleDelta * 0.5);
+                if (end > start) {
+                    for (let angle = start; angle < end; angle = angle + angleDelta) {
+                        particleFactory(angle + Math.random() * angleDelta * randomness);
+                    }
+                } else {
+                    for (let angle = start; angle > end; angle = angle + angleDelta) {
+                        particleFactory(angle + Math.random() * angleDelta * randomness);
+                    }
+                }
+            }
+
+            function crossetteEffect(star) {}
+            function floralEffect(star) {}
+            function fallingLeavesEffect(star) {}
+            function crackleEffect(star) {}
 
             // 初始显示一个烟花
             setTimeout(() => {
