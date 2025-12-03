@@ -12,39 +12,52 @@
             box-sizing: border-box;
         }
         
-        /* 强制横屏布局 */
         html, body {
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
             position: fixed;
-            top: 0;
-            left: 0;
         }
         
         body {
             font-family: 'Microsoft YaHei', sans-serif;
             background: linear-gradient(135deg, #ffafbd, #ffc3a0);
-            /* 强制横屏布局 */
-            transform: rotate(90deg);
-            transform-origin: center center;
-            width: 100vh;
-            height: 100vw;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            margin: auto;
+            position: relative;
         }
         
-        /* 移动端适配 */
-        @media screen and (min-aspect-ratio: 1/1) {
-            body {
-                /* 如果是横屏状态，保持正常 */
+        /* 旋转容器 - 只在竖屏时旋转 */
+        .rotation-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.3s ease;
+        }
+        
+        /* 竖屏状态 - 旋转内容 */
+        @media screen and (orientation: portrait) {
+            .rotation-container {
+                /* 将内容旋转90度 */
+                transform: rotate(90deg);
+                transform-origin: left top;
+                width: 100vh;
+                height: 100vw;
+                left: 100vw;
+                top: 0;
+                transform: rotate(90deg) translateY(-100%);
+                transform-origin: left top;
+            }
+        }
+        
+        /* 横屏状态 - 正常显示 */
+        @media screen and (orientation: landscape) {
+            .rotation-container {
                 transform: none;
                 width: 100vw;
                 height: 100vh;
+                left: 0;
+                top: 0;
             }
         }
         
@@ -126,7 +139,6 @@
             z-index: 5;
             overflow: hidden;
             -webkit-tap-highlight-color: transparent;
-            transform-origin: center; /* 确保旋转后元素正常 */
         }
         
         .tip-window:hover {
@@ -209,22 +221,25 @@
     </style>
 </head>
 <body>
-    <!-- 初始欢迎页面 -->
-    <div class="welcome-screen" id="welcomeScreen">
-        <div class="welcome-title">请我最爱的人收下这份礼物</div>
-        <div class="countdown" id="countdown">3</div>
-    </div>
-    
-    <canvas id="canvas"></canvas>
-    
-    <!-- 烟花容器 -->
-    <div id="fireworks-container">
-        <div class="fireworks-stage-container">
-            <div class="fireworks-title">请ZY看烟花</div>
-            <div class="fireworks-instructions">点击任意处发射烟花</div>
-            <div class="fireworks-canvas-container">
-                <canvas id="trails-canvas"></canvas>
-                <canvas id="main-canvas"></canvas>
+    <!-- 旋转容器 -->
+    <div class="rotation-container" id="rotationContainer">
+        <!-- 初始欢迎页面 -->
+        <div class="welcome-screen" id="welcomeScreen">
+            <div class="welcome-title">请我最爱的人收下这份礼物</div>
+            <div class="countdown" id="countdown">3</div>
+        </div>
+        
+        <canvas id="canvas"></canvas>
+        
+        <!-- 烟花容器 -->
+        <div id="fireworks-container">
+            <div class="fireworks-stage-container">
+                <div class="fireworks-title">请ZY看烟花</div>
+                <div class="fireworks-instructions">点击任意处发射烟花</div>
+                <div class="fireworks-canvas-container">
+                    <canvas id="trails-canvas"></canvas>
+                    <canvas id="main-canvas"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -269,19 +284,22 @@
         let loadedImages = [];
         let heartPoints = [];
 
-        // 获取实际显示尺寸（考虑旋转）
+        // 获取正确的显示尺寸（考虑旋转）
         function getActualDimensions() {
-            // 如果是竖屏设备，需要交换宽高
             const isPortrait = window.innerHeight > window.innerWidth;
             if (isPortrait) {
+                // 竖屏时，页面被旋转，所以实际显示尺寸是交换的
                 return {
                     width: window.innerHeight,
-                    height: window.innerWidth
+                    height: window.innerWidth,
+                    isRotated: true
                 };
             } else {
+                // 横屏时，正常显示
                 return {
                     width: window.innerWidth,
-                    height: window.innerHeight
+                    height: window.innerHeight,
+                    isRotated: false
                 };
             }
         }
@@ -311,8 +329,13 @@
             screenWidth = actual.width;
             screenHeight = actual.height;
             
+            // 更新canvas尺寸
             canvas.width = screenWidth;
             canvas.height = screenHeight;
+            
+            // 更新canvas样式尺寸
+            canvas.style.width = screenWidth + 'px';
+            canvas.style.height = screenHeight + 'px';
             
             // 根据屏幕大小动态调整参数
             const scale = Math.min(screenWidth, screenHeight) / 500;
@@ -472,7 +495,7 @@
                 e.preventDefault();
             }, { passive: false });
             
-            document.body.appendChild(window);
+            document.getElementById('rotationContainer').appendChild(window);
             windowList.push(windowInfo);
             
             return windowInfo;
