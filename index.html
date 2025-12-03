@@ -16,6 +16,7 @@
             font-size: 16px;
             width: 100%;
             height: 100%;
+            overflow: hidden;
         }
         
         body {
@@ -25,6 +26,49 @@
             width: 100%;
             height: 100%;
             min-height: 100vh;
+            position: fixed;
+        }
+        
+        /* 横屏提示 */
+        .landscape-message {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 1000;
+            padding: 2rem;
+            display: none;
+        }
+        
+        .landscape-message h2 {
+            font-size: clamp(1.5rem, 6vw, 2.5rem);
+            margin-bottom: 1.5rem;
+            text-shadow: 0.1rem 0.1rem 0.2rem rgba(0, 0, 0, 0.3);
+        }
+        
+        .landscape-message p {
+            font-size: clamp(1rem, 4vw, 1.5rem);
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+        
+        .rotate-icon {
+            font-size: clamp(3rem, 15vw, 5rem);
+            animation: rotate 2s ease-in-out infinite;
+            margin-bottom: 2rem;
+        }
+        
+        @keyframes rotate {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
         }
         
         /* 初始欢迎页面样式 */
@@ -85,6 +129,7 @@
             z-index: 20;
             display: none;
             background: #000;
+            touch-action: none; /* 防止触摸时的默认行为 */
         }
         
         .tip-window {
@@ -103,6 +148,7 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             z-index: 5;
             overflow: hidden;
+            -webkit-tap-highlight-color: transparent; /* 移除点击高亮 */
         }
         
         .tip-window:hover {
@@ -140,6 +186,10 @@
             height: 100%;
             transition: filter 0.3s;
             cursor: pointer;
+            -webkit-tap-highlight-color: transparent; /* 移除点击高亮 */
+            -webkit-touch-callout: none; /* 禁用长按菜单 */
+            -webkit-user-select: none; /* 禁止文本选择 */
+            user-select: none;
         }
 
         .fireworks-canvas-container canvas {
@@ -147,6 +197,7 @@
             mix-blend-mode: lighten;
             width: 100% !important;
             height: 100% !important;
+            display: block; /* 防止canvas闪烁 */
         }
 
         .fireworks-title {
@@ -180,6 +231,13 @@
     </style>
 </head>
 <body>
+    <!-- 横屏提示 -->
+    <div class="landscape-message" id="landscapeMessage">
+        <div class="rotate-icon">↻</div>
+        <h2>请将手机横屏观看</h2>
+        <p>为了获得最佳体验<br>请将设备旋转到横屏模式</p>
+    </div>
+    
     <!-- 初始欢迎页面 -->
     <div class="welcome-screen" id="welcomeScreen">
         <div class="welcome-title">请我最爱的人收下这份礼物</div>
@@ -201,6 +259,53 @@
     </div>
 
     <script>
+        // 检查是否横屏
+        function checkOrientation() {
+            const landscapeMessage = document.getElementById('landscapeMessage');
+            const isPortrait = window.innerHeight > window.innerWidth;
+            
+            // 如果是竖屏且屏幕宽度小于768px（手机设备），显示横屏提示
+            if (isPortrait && window.innerWidth < 768) {
+                landscapeMessage.style.display = 'flex';
+                return false;
+            } else {
+                landscapeMessage.style.display = 'none';
+                return true;
+            }
+        }
+        
+        // 初始化
+        function init() {
+            // 先检查横屏
+            if (!checkOrientation()) {
+                // 如果当前是竖屏，监听方向变化
+                window.addEventListener('resize', checkOrientation);
+                window.addEventListener('orientationchange', checkOrientation);
+                return;
+            }
+            
+            // 横屏状态下继续初始化
+            startApp();
+        }
+        
+        function startApp() {
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+            
+            // 设置Canvas尺寸
+            updateCanvasSize();
+            
+            // 开始倒计时
+            startCountdown();
+            
+            // 自动加载1.png到36.png
+            loadLocalImages();
+            
+            // 添加窗口调整监听
+            window.addEventListener('resize', handleResize);
+            window.addEventListener('orientationchange', handleResize);
+        }
+        
         // 配置参数 - 自适应调整
         const CONFIG = {
             numWindows: 60, // 手机端减少数量
@@ -232,32 +337,12 @@
         ];
 
         // 全局变量
-        let canvas, ctx;
         let windowList = [];
         let animationId;
         let isAnimating = false;
         let screenWidth, screenHeight;
         let loadedImages = [];
         let heartPoints = [];
-
-        // 初始化
-        function init() {
-            canvas = document.getElementById('canvas');
-            ctx = canvas.getContext('2d');
-            
-            // 设置Canvas尺寸
-            updateCanvasSize();
-            
-            // 开始倒计时
-            startCountdown();
-            
-            // 自动加载1.png到36.png
-            loadLocalImages();
-            
-            // 添加窗口调整监听
-            window.addEventListener('resize', handleResize);
-            window.addEventListener('orientationchange', handleResize);
-        }
 
         // 更新Canvas尺寸
         function updateCanvasSize() {
@@ -281,6 +366,9 @@
             if (heartPoints.length > 0) {
                 heartPoints = getHeartPoints(CONFIG.numWindows);
             }
+            
+            // 检查是否需要显示横屏提示
+            checkOrientation();
         }
 
         // 开始倒计时
@@ -423,7 +511,7 @@
             // 添加触摸事件支持
             window.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-            });
+            }, { passive: false });
             
             document.body.appendChild(window);
             windowList.push(windowInfo);
@@ -614,7 +702,7 @@
             }
         }
 
-        // ==================== 完整烟花代码 ====================
+        // ==================== 修复后的烟花代码 ====================
         function initFireworks() {
             'use strict';
             console.clear();
@@ -760,6 +848,13 @@
                     this.canvas.height = height * this.dpr;
                     this.canvas.style.width = width + 'px';
                     this.canvas.style.height = height + 'px';
+                    // 修复闪烁：设置canvas为display: block
+                    this.canvas.style.display = 'block';
+                    // 修复闪烁：关闭GPU加速的图像平滑
+                    this.ctx.imageSmoothingEnabled = false;
+                    this.ctx.mozImageSmoothingEnabled = false;
+                    this.ctx.webkitImageSmoothingEnabled = false;
+                    this.ctx.msImageSmoothingEnabled = false;
                 }
                 
                 addEventListener(event, callback) {
@@ -779,8 +874,11 @@
             const mainStage = new Stage(mainCanvas);
             const stages = [trailsStage, mainStage];
 
+            // 初始化背景
             trailsStage.ctx.fillStyle = '#000';
             trailsStage.ctx.fillRect(0, 0, trailsStage.width, trailsStage.height);
+            mainStage.ctx.fillStyle = '#000';
+            mainStage.ctx.fillRect(0, 0, mainStage.width, mainStage.height);
 
             function makePistilColor(shellColor) {
                 return (shellColor === COLOR.White || shellColor === COLOR.Gold) ? randomColor({
@@ -788,6 +886,7 @@
                 }) : whiteOrGold();
             }
 
+            // 各种烟花类型定义保持不变...
             const crysanthemumShell = (size = 1) => {
                 const glitter = Math.random() < 0.25;
                 const singleColor = Math.random() < 0.68;
@@ -1009,13 +1108,32 @@
             let activePointerCount = 0;
             let isUpdatingSpeed = false;
 
+            // 修复闪烁：添加防抖处理
+            let lastLaunchTime = 0;
+            const MIN_LAUNCH_INTERVAL = 200; // 最小发射间隔200ms
+
             function handlePointerStart(event) {
                 if (!canInteract()) return;
                 event.preventDefault();
+                event.stopPropagation();
+                
+                // 防抖处理，防止快速连续点击
+                const now = Date.now();
+                if (now - lastLaunchTime < MIN_LAUNCH_INTERVAL) {
+                    return;
+                }
+                lastLaunchTime = now;
+                
+                // 移除可能存在的点击效果
+                if (event.target.style) {
+                    event.target.style.webkitTapHighlightColor = 'transparent';
+                }
+                
                 launchShellFromConfig(event);
             }
 
             function handlePointerEnd(event) {
+                event.preventDefault();
                 activePointerCount--;
                 isUpdatingSpeed = false;
             }
@@ -1033,16 +1151,60 @@
                 }
             }
 
-            // 添加触摸事件支持
-            mainCanvas.addEventListener('touchstart', function(e) {
-                handlePointerStart(e.touches[0]);
+            // 修复闪烁：优化事件监听器
+            function setupEventListeners() {
+                const canvasContainer = document.querySelector('.fireworks-canvas-container');
+                if (!canvasContainer) return;
+                
+                // 移除所有现有事件监听器
+                canvasContainer.removeEventListener('touchstart', handlePointerStart);
+                canvasContainer.removeEventListener('touchend', handlePointerEnd);
+                canvasContainer.removeEventListener('pointerdown', handlePointerStart);
+                canvasContainer.removeEventListener('pointerup', handlePointerEnd);
+                canvasContainer.removeEventListener('pointermove', handlePointerMove);
+                
+                // 重新添加事件监听器
+                canvasContainer.addEventListener('touchstart', handlePointerStart, { 
+                    passive: false,
+                    capture: true 
+                });
+                canvasContainer.addEventListener('touchend', handlePointerEnd, { 
+                    passive: false,
+                    capture: true 
+                });
+                canvasContainer.addEventListener('pointerdown', handlePointerStart, { 
+                    passive: false,
+                    capture: true 
+                });
+                canvasContainer.addEventListener('pointerup', handlePointerEnd, { 
+                    passive: false,
+                    capture: true 
+                });
+                canvasContainer.addEventListener('pointermove', handlePointerMove, { 
+                    passive: false,
+                    capture: true 
+                });
+                
+                // 防止页面滚动
+                canvasContainer.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                }, { passive: false });
+            }
+
+            // 初始化事件监听器
+            setupEventListeners();
+            
+            // 同时为canvas本身也添加事件
+            mainCanvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
+                handlePointerStart(e.touches[0]);
             }, { passive: false });
             
-            mainCanvas.addEventListener('touchend', handlePointerEnd);
-            mainCanvas.addEventListener('pointerdown', handlePointerStart);
-            mainCanvas.addEventListener('pointerup', handlePointerEnd);
-            mainCanvas.addEventListener('pointermove', handlePointerMove);
+            mainCanvas.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                handlePointerStart(e);
+            }, { passive: false });
+
             window.addEventListener('keydown', handleKeydown);
 
             function handleResize() {
@@ -1170,8 +1332,10 @@
                 
                 colorSky(speed);
                 
-                trailsCtx.resetTransform();
-                mainCtx.resetTransform();
+                // 修复闪烁：使用resetTransform而不是save/restore
+                trailsCtx.setTransform(1, 0, 0, 1, 0, 0);
+                mainCtx.setTransform(1, 0, 0, 1, 0, 0);
+                
                 if (dpr !== 1) {
                     trailsCtx.scale(dpr, dpr);
                     mainCtx.scale(dpr, dpr);
@@ -1181,6 +1345,8 @@
                 trailsCtx.fillStyle = `rgba(0, 0, 0, ${store.state.longExposure ? 0.0025 : 0.1 * speed})`;
                 trailsCtx.fillRect(0, 0, width, height);
                 trailsCtx.globalCompositeOperation = 'lighten';
+                
+                // 修复闪烁：使用clearRect而不是fillRect
                 mainCtx.clearRect(0, 0, width, height);
                 
                 while (BurstFlash.active.length) {
@@ -1227,8 +1393,9 @@
                     trailsCtx.stroke();
                 });
                 
-                trailsCtx.resetTransform();
-                mainCtx.resetTransform();
+                // 修复闪烁：重置transform
+                trailsCtx.setTransform(1, 0, 0, 1, 0, 0);
+                mainCtx.setTransform(1, 0, 0, 1, 0, 0);
             }
 
             const currentSkyColor = { r: 0, g: 0, b: 0 };
@@ -1275,7 +1442,10 @@
                 
                 requestAnimationFrame(animate);
             }
-            requestAnimationFrame(animate);
+            // 修复闪烁：使用requestAnimationFrame的稳定版本
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(animate);
+            }
 
             function createParticleArc(start, arcLength, count, randomness, particleFactory) {
                 const angleDelta = arcLength / count;
@@ -1678,8 +1848,21 @@
             }, 500);
         }
 
-        // 初始化
+        // 页面加载时初始化
         window.addEventListener('load', init);
+        
+        // 防止页面滚动
+        document.addEventListener('touchmove', function(e) {
+            if (e.target.classList.contains('fireworks-canvas-container') || 
+                e.target.tagName === 'CANVAS') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // 禁用双击缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
     </script>
 </body>
 </html>
